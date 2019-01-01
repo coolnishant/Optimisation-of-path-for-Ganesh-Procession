@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <style>
+            
+        </style>
+    </head>
+<body>
+
+<h1>My First Google Map</h1>
+
+<button id ="checkLG" type="button" onclick="selectGaneshaOrLake();">Select Ganesha</button>
+
+<div id="allhere">
+<h3>Select Ganesha</h3>
+<div id="googleMap" style="width:100%;height:400px;"></div>\
+</br>
+<h3>Select Lake</h3>
+<div id="googleMap2" style="width:100%;height:400px;"></div>\
+
+<button id ="allutility" type="button" onclick="allUtility();">Select Sure?</button>
+
+</div>
+
+<script>
+    var mapg;
+    var mapl;
+    var GaneshaMarkers = [];
+    var LakeMarkers = [];
+    var GaneshaDistanceLake = [];
+    var GaneshaDistanceGanesha = [];
+    
+    function allUtility(){
+//        var res = document.getElementById("googleMap");
+//    //    res.innerHTML = 'Hey';
+//            //        res.innerHTML = 'Select Lakes';
+//       res.disabled=true;
+//        document.getElementById('googleMap2').style.visiblity = 'none';
+        //all lake ganesha distnace
+        var totallake = LakeMarkers.length;
+        for (var i = 0; i < totallake; i++) {
+          setDistanceLakeOneToGanesha(i);
+      }
+        
+    }
+    
+    function selectGaneshaOrLake(){
+        var res = document.getElementById("checkLG");
+    //    res.innerHTML = 'Hey';
+        if(res.innerHTML === 'Select Lake'){
+            res.innerHTML='Select Ganesha';
+    //        res.innerHTML=marker.getPosition();
+        }
+        else if(res.innerHTML === 'Select Ganesha'){
+            res.innerHTML='Select Lake';
+        }
+    }
+    //var marker = new google.maps.Marker({position: myCenter});
+
+    function myMap() {
+    var mapProp= {
+        center:new google.maps.LatLng(18.958406,72.813222),
+        zoom:16
+    };
+    mapg=new google.maps.Map(document.getElementById("googleMap"),mapProp);
+    mapl=new google.maps.Map(document.getElementById("googleMap2"),mapProp);
+
+    //marker.setMap(map);
+
+    google.maps.event.addListener(mapg,'click',function(event) {
+    //  map.setZoom(9);
+    //  map.setCenter(marker.getPosition());
+      GaneshaMarkers.push(new google.maps.Marker({ position: event.latLng, map: mapg }));
+      });
+      
+    google.maps.event.addListener(mapl,'click',function(event) {
+    //  map.setZoom(9);
+    //  map.setCenter(marker.getPosition());
+      LakeMarkers.push(new google.maps.Marker({ position: event.latLng, map: mapl }));
+      });
+    }
+
+ function setDistanceLakeOneToGanesha(id) {
+     console.log(id);
+      currentLake = LakeMarkers[id];
+      var lat = currentLake.getPosition().lat();
+      var lng = currentLake.getPosition().lng();
+      var totalganesha = GaneshaMarkers.length;
+      for (var i = 0; i < totalganesha; i++) {
+//        if (activeMark.includes(i)) {
+          console.log('Lake id: ' + i);
+          var lat1 = GaneshaMarkers[i].getPosition().lat();
+          var lng1 = GaneshaMarkers[i].getPosition().lng();
+          var q = i;
+          $.ajax({
+            url: 'https://maps.googleapis.com/maps/api/distancematrix/json?units=metric&origins=' + lat + ',' + lng + '&destinations=' + lat1 + ',' + lng1 + '&key=AIzaSyCq_NfdZscVJ8ZPtanPN0LOzJhlNDw6xkg',
+            ajaxI: i,
+            success: function (data) {
+              var w1 = data.rows[0].elements[0].distance.value;
+//              w1 = w1 / 1000;
+//              var w2 = data.rows[0].elements[0].duration.value;
+//              w2 = w2 / 60;
+              var d1 = {
+                "S": this.ajaxI,
+                "D": id,
+                "W": w1
+              };
+              var d2 = {
+                "S": id,
+                "D": this.ajaxI,
+                "W": w1
+              };
+              
+//              var d3 = {
+//                "S": this.ajaxI,
+//                "D": id,
+//                "W": w2
+//              };
+//              var d4 = {
+//                "S": id,
+//                "D": this.ajaxI,
+//                "W": w2
+//              };
+
+              GaneshaDistanceLake.push([]);
+              GaneshaDistanceLake[id][i] = d1;
+              
+//              dataToBackendDist.push(d2);
+//              dataToBackendTime.push(d3);
+//              dataToBackendTime.push(d4);
+
+              return data;
+            }
+          });
+//        }
+      }
+      console.log(GaneshaDistanceLake);
+//      for (var k = 0; k < directionsDisplay.length; k++)
+//            if (directionsDisplay[k] != null) {
+//              directionsDisplay[k].setMap(null);
+//              directionsDisplay[k] = null;
+//            }
+//       directionsDisplay = [];
+//       $("#seqPlaces").html("");
+    }
+   
+</script>
+        
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCdyjkbstZZWeNbtml0pqagHZ0q-MtTzfw&callback=myMap"></script>
+<!-- JQuery -->
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <!-- Bootstrap tooltips -->
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.4/umd/popper.min.js"></script>
+  <!-- Bootstrap core JavaScript -->
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.1.3/js/bootstrap.min.js"></script>
+  <!-- MDB core JavaScript -->
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.4.1/js/mdb.min.js"></script>
+</body>
+</html>

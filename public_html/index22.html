@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <title>TSPxplore</title>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+  <!-- Bootstrap core CSS -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.1.3/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Material Design Bootstrap -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.4.1/css/mdb.min.css" rel="stylesheet">
+  <!-- Your custom styles (optional) -->
+  <style>
+    /* Always set the map height explicitly to define the size of the div
+     * element that contains the map. */
+    #map {
+      height: 100%;
+    }
+    /* Optional: Makes the sample page fill the window. */
+    html, body {
+      height: 100%;
+      max-width: 99.6%;
+      margin: 0;
+      padding: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="row" style="height:8%">
+    <div class="col-md-5">
+    </div>
+    <div class="col-md-2">
+      <h1 class="card animated fadeIn mb-2 text-center" style="margin-bottom:5%;margin-top:3%;margin-left:0.6%;">TSP
+        Xplore</h1>
+    </div>
+  </div>
+  <div class="row" style="height:90%;margin-bottom:1%;margin-left:1%;border-radius:10px">
+    <div class="card col col-md-3">
+      <div class="row" style="overflow-y:auto; overflow-x:hidden; height:45%;">
+        <h5 class="animated fadeIn mb-1" style="margin-top:5%;margin-left:5%;">Added Locations</h5>
+        <div id="places" style="margin-right:3%;margin-left:3%;">
+        </div>
+      </div>        
+      <div class="row" style="overflow-y:auto; overflow-x:hidden; height:45%">
+        <h5 class="animated fadeIn mb-1" style="margin-top:5%;margin-left:5%;">Route Sequence</h5>
+        <div id="seqPlaces" style="margin-right:3%;margin-left:3%;">
+        </div>
+      </div>
+      <div class="row" style="height:10%">
+        <div class="col-md-5"></div>
+        <div class="col-md-2">
+          <button type="button" class="btn btn-success btn-sm" onclick="findRoute('Dist')">
+            <i class="fa fa-road" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="col-md-1"></div>
+        <div class="col-md-2">
+          <button type="button" class="btn btn-info btn-sm" onclick="findRoute('Time')">
+            <i class="fa fa-clock-o" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-9">
+      <div id="map" class="container-fluid" style="border-radius:10px">
+      </div>
+    </div>
+  <!-- SCRIPTS -->
+  <script>
+    var map;
+    var markers = [];
+    var activeMark = [];
+    var placeArray = [];
+    var dataToBackendDist = [];
+    var dataToBackendTime = [];
+    var tempdata = [];
+    var tempdataTime = [];
+    var len = 0;
+    var route = [];
+    var directionsService;
+    var directionsDisplay = [];
+    var index = 0;
+    var startLocation;
+    function fun(id) {
+      // console.log('master'+id+' length'+markers.length);
+      markers[id].setMap(null);
+      var index = activeMark.indexOf(id);
+      if (index > -1) {
+        activeMark.splice(index, 1);
+        placeArray.splice(index, 1);
+      }
+      tempdata = [];
+      tempdataTime = [];
+      for (var i = 0; i < dataToBackendDist.length; i++) {
+        if (dataToBackendDist[i].S == id || dataToBackendDist[i].D == id) {
+        }
+        else {
+          tempdata.push(dataToBackendDist[i]);
+          tempdataTime.push(dataToBackendTime[i]);
+        }
+      }
+      for (var k = 0; k < directionsDisplay.length; k++)
+        if (directionsDisplay[k] != null) {
+          directionsDisplay[k].setMap(null);
+          directionsDisplay[k] = null;
+        }
+      directionsDisplay = [];
+      index = 0;
+      dataToBackendDist = tempdata;
+      dataToBackendTime = tempdataTime;
+      $("#seqPlaces").html("");
+    }
+    function findRoute(inparam) {
+      $('#target').html('sending..');
+      var arrlen = activeMark.length;
+      var parameters;
+      if (inparam == 'Dist') {
+        parameters = {
+          "size": arrlen,
+          "data": dataToBackendDist
+        };
+      }
+      else {
+        parameters = {
+          "size": arrlen,
+          "data": dataToBackendTime
+        };
+      }
+      var resultroute;
+      $.ajax({
+        url: 'http://127.0.0.1:5000/route',
+        type: 'post',
+        data: JSON.stringify(parameters),
+        dataType: 'json',
+        async: false,
+        contentType: 'application/json',
+        success: function (data) {
+          var temp = data;
+          resultroute = JSON.parse(temp).route;
+          for (var k = 0; k < directionsDisplay.length; k++)
+            if (directionsDisplay[k] != null) {
+              directionsDisplay[k].setMap(null);
+              directionsDisplay[k] = null;
+            }
+          directionsDisplay = [];
+ 	  $("#seqPlaces").html("");
+          index = 0;
+          console.log("----" + typeof resultroute + " +++ " + resultroute);
+          
+          for (var i = 0; i < arrlen; i++) {
+            var lat1 = markers[resultroute[i]].getPosition().lat();
+            var lng1 = markers[resultroute[i]].getPosition().lng();
+            var lat2 = markers[resultroute[(i + 1) % arrlen]].getPosition().lat();
+            var lng2 = markers[resultroute[(i + 1) % arrlen]].getPosition().lng();
+            calcRoute(lat1, lng1, lat2, lng2);
+          }
+        }
+      });
+	console.log(resultroute.length+"---"+activeMark.length+"---"+activeMark[0]+"---"+$("input[name=startpoint]:checked").val());
+      
+      var k=$("input[name=startpoint]:checked").val();
+      if ( k != undefined){
+	  //k=resultroute.indexOf(($("input[name=startpoint]:checked")).val()); console.log("<<<"+k);
+	for(var q=0;q<resultroute.length;q++){
+		if(resultroute[q]==k){
+			k=q;
+			console.log("done"+k);
+			break;
+		}	
+	}
+      }
+      else{
+	  k=resultroute.indexOf(activeMark[0]);
+      }
+      for (var j = 0; j <resultroute.length; j++) {
+	var placeAddress = placeArray[activeMark.indexOf(resultroute[(j+k)%resultroute.length])]
+        //var placeAddress = placeArray[activeMark.indexOf(resultroute[j])]
+        /* if (placeAddress.length > 65) {
+          $("#seqPlaces")
+            .append($('<div class="row">')
+              .append($('<div class="col-md-12">')
+                .append($('<p style="font-size:12px;" title="' + placeAddress + '">')
+                  .text(placeAddress.substring(0, 62) + '...')))
+            );
+        }
+        else {
+        */
+	
+          $("#seqPlaces")
+            .append($('<div class="row">')
+              .append($('<div class="col-md-12">')
+                .append($('<p style="font-size:12px;" title="' + placeAddress + '">')
+                  .text(placeAddress)))
+            );
+        //}
+      }
+    }
+    function addLocation(id) {
+      current = markers[id];
+      var lat = current.getPosition().lat();
+      var lng = current.getPosition().lng();
+      for (var i = 0; i < id; i++) {
+        if (activeMark.includes(i)) {
+          console.log('great' + i);
+          var lat1 = markers[i].getPosition().lat();
+          var lng1 = markers[i].getPosition().lng();
+          var q = i;
+          $.ajax({
+            url: 'https://maps.googleapis.com/maps/api/distancematrix/json?units=metric&origins=' + lat + ',' + lng + '&destinations=' + lat1 + ',' + lng1 + '&key=AIzaSyCq_NfdZscVJ8ZPtanPN0LOzJhlNDw6xkg',
+            ajaxI: i,
+            success: function (data) {
+              var w1 = data.rows[0].elements[0].distance.value;
+              w1 = w1 / 1000;
+              var w2 = data.rows[0].elements[0].duration.value;
+              w2 = w2 / 60;
+              var d1 = {
+                "S": this.ajaxI,
+                "D": id,
+                "W": w1
+              };
+              var d2 = {
+                "S": id,
+                "D": this.ajaxI,
+                "W": w1
+              };
+              var d3 = {
+                "S": this.ajaxI,
+                "D": id,
+                "W": w2
+              };
+              var d4 = {
+                "S": id,
+                "D": this.ajaxI,
+                "W": w2
+              };
+              dataToBackendDist.push(d1);
+              dataToBackendDist.push(d2);
+              dataToBackendTime.push(d3);
+              dataToBackendTime.push(d4);
+              return data;
+            }
+          });
+        }
+      }
+      console.log(dataToBackendDist);
+      for (var k = 0; k < directionsDisplay.length; k++)
+            if (directionsDisplay[k] != null) {
+              directionsDisplay[k].setMap(null);
+              directionsDisplay[k] = null;
+            }
+       directionsDisplay = [];
+       $("#seqPlaces").html("");
+    }
+    function initMap() {
+      var geocoder = new google.maps.Geocoder();
+      directionsService = new google.maps.DirectionsService();
+      var placeAddress;
+      map = new google.maps.Map(document.getElementById('map'), {
+        center: { lat: 13.0108, lng: 74.7943 },
+        zoom: 14,
+        mapTypeControlOarrayptions: {
+          mapTypeIds: []
+        },
+        mapTypeId: google.maps.MapTypeId.ROADMAP
+      });
+      google.maps.event.addListener(map, 'click', function (event) {
+        if (event.placeId)
+          event.stop();
+        geocoder.geocode({ 'location': event.latLng }, function (results, status) {
+          if (status === 'OK') {
+            if (results[0]) {
+              markers.push(new google.maps.Marker({ position: event.latLng, map: map }));
+              placeAddress = results[0].formatted_address;
+              placeArray.push(placeAddress);
+              /* if (placeAddress.length > 65) {
+                $("#places")
+                  .append($('<div class="row" id="' + len + '">')
+                    .append($('<div class="col-md-10">')
+                      .append($('<p style="font-size:12px;"title="' + placeAddress + '">')
+                        .text(placeAddress.substring(0, 62) + '...')))
+                    .append($('<div class="col-md-1">')
+                      .append($('<button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>')
+                        .attr('onClick', '$(this).parent().parent().remove();fun(' + len + ')')
+                      ))
+                  );
+                len++;
+              }
+              else {
+              */
+                $("#places")
+                  .append($('<div class="row" id="' + len + '">')
+ 		    .append($('<div class="col-md-1">')
+                      .append($('<input type="radio" name="startpoint" value="'+len+'" aria-label="Start Point">')
+                      ))
+                    .append($('<div class="col-md-9">')
+                      .append($('<p style="font-size:12px; title="' + placeAddress + '">')
+                        .text(placeAddress)))
+                    .append($('<div class="col-md-1">')
+                      .append($('<button type="button" class="close" aria-label="Close"><span aria-hidden="true">&times;</span></button>')
+                        .attr('onClick', '$(this).parent().parent().remove();fun(' + len + ')')
+                      ))
+                  );
+                len++;
+              //}
+              activeMark.push(len - 1);
+              addLocation(len - 1);
+            } else {
+              window.alert('No results found');
+            }
+          }
+          else {
+            window.alert('Geocoder failed due to: ' + status);
+          }
+        });
+      });
+    }
+    function calcRoute(lat1, long1, lat2, long2) {
+      var start = new google.maps.LatLng(lat1, long1);
+      var end = new google.maps.LatLng(lat2, long2);
+      var request = {
+        origin: start,
+        destination: end,
+        travelMode: google.maps.TravelMode.DRIVING
+      };
+      directionsService.route(request, function (response, status) {
+        if (status == google.maps.DirectionsStatus.OK) {
+          directionsDisplay[index] = new google.maps.DirectionsRenderer();
+          directionsDisplay[index].setDirections(response);
+          directionsDisplay[index].setMap(map);
+          directionsDisplay[index].setOptions({ suppressMarkers: true });
+          index++;
+        } else {
+          alert("Directions Request from " + start.toUrlValue(6) + " to " + end.toUrlValue(6) + " failed: " + status);
+        }
+      });
+    }
+  </script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCq_NfdZscVJ8ZPtanPN0LOzJhlNDw6xkg&callback=initMap"
+    async defer></script>
+  <!-- JQuery -->
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <!-- Bootstrap tooltips -->
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.4/umd/popper.min.js"></script>
+  <!-- Bootstrap core JavaScript -->
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.1.3/js/bootstrap.min.js"></script>
+  <!-- MDB core JavaScript -->
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.4.1/js/mdb.min.js"></script>
+</body>
+
+</html>
